@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Training">
+<title>Trainingsplan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1b1a18;
+    --surface:#242219;
+    --surface-2:#2e2b22;
+    --text:#ede7da;
+    --muted:#8f8879;
+    --rust:#c0432e;
+    --rust-dim:#8a3325;
+    --gold:#c9a227;
+    --border:#3a362c;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior:none;}
+  #app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
+  .top-safe{height:env(safe-area-inset-top);flex-shrink:0;}
+  main{flex:1;overflow-y:auto;padding:20px 18px 100px;}
+  h1,h2,h3{font-family:'Oswald',sans-serif;text-transform:uppercase;margin:0;letter-spacing:0.03em;}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;}
+
+  .page-head{margin-bottom:18px;}
+  .page-head h1{font-size:28px;font-weight:700;color:var(--text);}
+  .date-line{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-top:2px;}
+
+  /* home dashboard */
+  .greet-head h1{font-size:23px;cursor:default;}
+  .greet-head .date-line{font-size:12.5px;}
+  .greet-head .date-line.weekday{color:var(--text);opacity:0.7;margin-top:1px;}
+
+  .home-grid{display:grid;grid-template-columns:1fr 1.35fr;grid-template-rows:auto auto;
+    gap:10px;margin:18px 0 12px;}
+  .tile{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  .tile-spotify{grid-column:1;grid-row:1;padding:14px;display:flex;flex-direction:column;
+    justify-content:center;min-height:88px;}
+  .tile-spotify .tile-label{font-family:'Oswald',sans-serif;font-size:14px;letter-spacing:0.03em;
+    text-transform:uppercase;color:var(--green,#5c8c5c);}
+  .tile-spotify .tile-sub{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);
+    margin-top:4px;}
+  .tile-lastplan{grid-column:2;grid-row:1 / span 2;background:var(--rust);border-color:var(--rust);
+    padding:16px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;
+    min-height:186px;}
+  .tile-lastplan .tile-label{font-family:'JetBrains Mono',monospace;font-size:10.5px;
+    letter-spacing:0.1em;text-transform:uppercase;opacity:0.8;}
+  .tile-lastplan .tile-value{font-family:'Oswald',sans-serif;font-size:22px;text-transform:uppercase;
+    letter-spacing:0.02em;margin-top:8px;line-height:1.15;}
+  .tile-lastplan .tile-sub{font-family:'JetBrains Mono',monospace;font-size:11px;opacity:0.85;
+    margin-top:auto;padding-top:14px;}
+  .timer-tile{grid-column:1;grid-row:2;padding:0;overflow:hidden;display:flex;flex-direction:column;
+    cursor:default;}
+  .timer-tile .seg{padding:9px 10px;text-align:center;}
+  .timer-tile .seg.start{font-family:'Oswald',sans-serif;font-size:10.5px;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--border);border-bottom:1px solid var(--border);}
+  .timer-tile .seg.start.active{color:var(--gold);cursor:pointer;}
+  .timer-tile .seg.mid{font-family:'JetBrains Mono',monospace;font-size:19px;color:var(--text);
+    padding:9px 4px;}
+  .timer-tile .seg.stop{font-family:'Oswald',sans-serif;font-size:10.5px;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--border);border-top:1px solid var(--border);}
+  .timer-tile .seg.stop.active{color:var(--rust);cursor:pointer;font-weight:600;}
+
+  .last-training-row{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .last-training-row .last-value{font-family:'JetBrains Mono',monospace;font-size:17px;color:var(--text);}
+
+  .day-chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 18px;margin:0;list-style:none;}
+  .day-chip{flex-shrink:0;padding:9px 16px;border-radius:100px;border:1px solid var(--border);
+    background:var(--surface);color:var(--muted);font-family:'Oswald',sans-serif;font-size:13px;
+    letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;}
+  .day-chip.active{background:var(--rust);border-color:var(--rust);color:#fff;}
+
+  .exercise{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:16px 16px 14px;margin-bottom:12px;}
+  .ex-name{font-size:16px;font-weight:600;color:var(--text);}
+  .ex-target{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:3px;}
+  .tally-row{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center;}
+  .tally{position:relative;width:14px;height:20px;flex-shrink:0;}
+  .tally .stroke{position:absolute;left:6px;top:0;width:2px;height:20px;background:var(--rust);border-radius:1px;}
+  .tally .diag{position:absolute;left:-8px;top:2px;width:22px;height:2px;background:var(--rust);
+    transform:rotate(-32deg);border-radius:1px;}
+  .tally.empty .stroke,.tally.empty .diag{background:var(--border);}
+
+  .set-form{display:flex;gap:8px;margin-top:12px;align-items:flex-end;}
+  .set-form .field{flex:1;}
+  .set-form input{width:100%;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:8px;padding:9px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;
+    font-size:14px;text-align:center;}
+  .set-form input::placeholder{color:var(--muted);}
+  .set-form .unit{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
+    display:block;text-align:center;margin-top:3px;}
+  .btn-log{flex-shrink:0;background:var(--rust);color:#fff;border:none;border-radius:8px;
+    padding:0 16px;height:40px;font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:0.04em;
+    text-transform:uppercase;cursor:pointer;}
+  .btn-log:active{background:var(--rust-dim);}
+  .logged-sets{margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--muted);}
+  .logged-sets span{color:var(--text);}
+
+  .finish-bar{position:sticky;bottom:0;margin-top:8px;}
+  .btn-primary{width:100%;background:var(--rust);color:#fff;border:none;border-radius:12px;
+    padding:15px;font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:0.04em;
+    text-transform:uppercase;cursor:pointer;}
+  .btn-primary:disabled{background:var(--surface-2);color:var(--muted);}
+  .btn-secondary{width:100%;background:transparent;color:var(--muted);border:1px dashed var(--border);
+    border-radius:12px;padding:13px;font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:0.04em;
+    text-transform:uppercase;cursor:pointer;margin-top:8px;}
+
+  .empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
+  .empty-state .eyebrow{margin-bottom:8px;}
+
+  .session{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:14px 16px;margin-bottom:10px;}
+  .session-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+  .session-day{font-family:'Oswald',sans-serif;font-size:15px;text-transform:uppercase;letter-spacing:0.03em;}
+  .session-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;}
+  .session-body{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:none;}
+  .session.open .session-body{display:block;}
+  .hist-ex{margin-bottom:8px;font-size:13.5px;}
+  .hist-ex .name{color:var(--text);font-weight:600;}
+  .hist-ex .sets{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-top:2px;}
+  .chev{color:var(--muted);font-size:16px;transition:transform .15s;}
+  .session.open .chev{transform:rotate(90deg);}
+
+  /* trainingsplan list */
+  .plan-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:14px 14px 14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+  .plan-card .name{font-family:'Oswald',sans-serif;font-size:17px;text-transform:uppercase;letter-spacing:0.03em;}
+  .plan-card .meta{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:4px;}
+  .plan-actions{display:flex;gap:8px;flex-shrink:0;}
+  .icon-circle{width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;padding:0;}
+  .icon-circle.edit{background:var(--surface-2);color:var(--text);border:1px solid var(--border);font-size:15px;}
+  .icon-circle.play{background:#4c8c5c;color:#fff;font-size:0;}
+  .icon-circle.play .tri{width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;
+    border-left:11px solid #fff;margin-left:3px;}
+  .new-plan-card{background:none;border:1px dashed var(--border);border-radius:14px;padding:16px;
+    color:var(--muted);font-family:'Oswald',sans-serif;font-size:14px;letter-spacing:0.04em;
+    text-transform:uppercase;text-align:center;cursor:pointer;margin-bottom:10px;}
+  .new-plan-card .plus{color:var(--rust);font-size:16px;margin-right:6px;}
+
+  .modal-backdrop{position:fixed;inset:0;background:rgba(10,9,7,0.65);display:flex;align-items:center;
+    justify-content:center;padding:24px;z-index:80;}
+  .modal-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:24px 20px 20px;max-width:320px;width:100%;text-align:center;}
+  .modal-card .eyebrow{margin-bottom:8px;}
+  .modal-card p{font-size:14.5px;color:var(--text);margin:0 0 20px;line-height:1.45;}
+  .modal-actions{display:flex;gap:10px;}
+  .modal-actions button{flex:1;padding:12px;border-radius:9px;font-family:'Oswald',sans-serif;
+    font-size:13px;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;border:none;}
+  .modal-actions .m-cancel{background:var(--surface-2);color:var(--text);}
+  .modal-actions .m-confirm{background:var(--rust);color:#fff;}
+
+  .delete-plan-btn{width:100%;background:none;border:1px solid var(--rust-dim);color:var(--rust);
+    border-radius:12px;padding:13px;font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:0.04em;
+    text-transform:uppercase;cursor:pointer;margin-top:22px;}
+
+  /* editor screen */
+  .editor-topbar{display:flex;justify-content:space-between;align-items:center;
+    padding:calc(10px + env(safe-area-inset-top)) 18px 12px;background:var(--surface);
+    border-bottom:1px solid var(--border);flex-shrink:0;}
+  .editor-topbar button{background:none;border:none;font-family:'Oswald',sans-serif;font-size:13px;
+    letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;padding:6px 4px;}
+  .editor-topbar .cancel{color:var(--muted);}
+  .editor-topbar .save{color:var(--rust);font-weight:600;}
+  .editor-topbar .title{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
+    letter-spacing:0.1em;text-transform:uppercase;}
+  .name-input-big{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);
+    color:var(--text);font-family:'Oswald',sans-serif;font-size:26px;text-transform:uppercase;
+    letter-spacing:0.02em;padding:8px 0 12px;margin-bottom:18px;}
+  .name-input-big::placeholder{color:var(--muted);}
+  .ex-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+  .ex-row .name{font-size:14.5px;font-weight:600;}
+  .ex-row .spec{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-top:2px;}
+  .ex-row .del{background:none;border:none;color:var(--muted);font-size:15px;padding:2px 6px;}
+  .add-ex-form{background:var(--surface);border:1px dashed var(--border);border-radius:14px;
+    padding:14px;margin-top:14px;}
+  .add-ex-form .eyebrow{margin-bottom:10px;}
+  .add-ex-form input{width:100%;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:8px;padding:9px 10px;color:var(--text);font-size:13.5px;margin-bottom:8px;}
+  .add-ex-form .row3{display:flex;gap:8px;}
+  .add-ex-form .row3 .field{flex:1;}
+  .add-ex-form .row3 input{font-family:'JetBrains Mono',monospace;text-align:center;margin-bottom:0;}
+  .add-ex-form .unit{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);
+    display:block;text-align:center;margin-top:3px;}
+  .add-ex-btn{width:100%;background:var(--rust);color:#fff;border:none;border-radius:8px;
+    padding:10px;margin-top:10px;font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:0.04em;
+    text-transform:uppercase;cursor:pointer;}
+  .reset-link{display:block;text-align:center;margin-top:26px;color:var(--muted);
+    font-family:'JetBrains Mono',monospace;font-size:11.5px;text-decoration:underline;
+    background:none;border:none;cursor:pointer;}
+
+  nav.tabbar{flex-shrink:0;display:flex;background:var(--surface);border-top:1px solid var(--border);
+    padding:8px 8px calc(8px + env(safe-area-inset-bottom));}
+  nav.tabbar button{flex:1;background:none;border:none;color:var(--muted);display:flex;flex-direction:column;
+    align-items:center;gap:3px;padding:6px 0;cursor:pointer;font-family:'Oswald',sans-serif;
+    font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;}
+  nav.tabbar button.active{color:var(--rust);}
+  nav.tabbar .dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:0;}
+  nav.tabbar button.active .dot{opacity:1;}
+
+  .loading{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top-safe" id="topsafe"></div>
+  <main id="main"><div class="loading">Lade Trainingsdaten…</div></main>
+  <nav class="tabbar" id="tabbar">
+    <button data-tab="history"><span>Verlauf</span><span class="dot"></span></button>
+    <button data-tab="home"><span>Home</span><span class="dot"></span></button>
+    <button data-tab="plans"><span>Trainingsplan</span><span class="dot"></span></button>
+  </nav>
+</div>
+<div id="modal-root"></div>
+
+<script>
+const DEFAULT_PLANS = [
+  { id:'p1', name:'Push', exercises:[
+    { id:'e1', name:'Bankdrücken', targetSets:4, targetReps:8, targetWeight:40 },
+    { id:'e2', name:'Schulterdrücken', targetSets:3, targetReps:10, targetWeight:20 },
+    { id:'e3', name:'Trizeps am Kabel', targetSets:3, targetReps:12, targetWeight:15 },
+  ]},
+  { id:'p2', name:'Pull', exercises:[
+    { id:'e4', name:'Klimmzüge', targetSets:4, targetReps:8, targetWeight:0 },
+    { id:'e5', name:'Rudern', targetSets:4, targetReps:10, targetWeight:35 },
+    { id:'e6', name:'Bizeps-Curls', targetSets:3, targetReps:12, targetWeight:12 },
+  ]},
+  { id:'p3', name:'Beine', exercises:[
+    { id:'e7', name:'Kniebeugen', targetSets:4, targetReps:8, targetWeight:50 },
+    { id:'e8', name:'Beinpresse', targetSets:3, targetReps:12, targetWeight:80 },
+    { id:'e9', name:'Wadenheben', targetSets:3, targetReps:15, targetWeight:40 },
+  ]},
+];
+
+let state = { plans:[], sessions:[], draft:{}, activePlanId:null, tab:'home', openSessions:{}, editor:null, pendingConfirm:null, workoutOpen:false, timerStart:null, lastTraining:null };
+
+async function loadAll(){
+  try{
+    const p = await window.storage.get('plans');
+    state.plans = p ? JSON.parse(p.value) : DEFAULT_PLANS;
+  }catch(e){ state.plans = DEFAULT_PLANS; }
+  try{
+    const s = await window.storage.get('sessions');
+    state.sessions = s ? JSON.parse(s.value) : [];
+  }catch(e){ state.sessions = []; }
+  try{
+    const d = await window.storage.get('draft');
+    state.draft = d ? JSON.parse(d.value) : {};
+  }catch(e){ state.draft = {}; }
+  try{
+    const ts = await window.storage.get('timerStart');
+    state.timerStart = ts ? JSON.parse(ts.value) : null;
+  }catch(e){ state.timerStart = null; }
+  try{
+    const lt = await window.storage.get('lastTraining');
+    state.lastTraining = lt ? JSON.parse(lt.value) : null;
+  }catch(e){ state.lastTraining = null; }
+  state.activePlanId = state.draft.planId || (state.plans[0] && state.plans[0].id);
+  render();
+}
+
+async function savePlans(){ try{ await window.storage.set('plans', JSON.stringify(state.plans)); }catch(e){} }
+async function saveSessions(){ try{ await window.storage.set('sessions', JSON.stringify(state.sessions)); }catch(e){} }
+async function saveDraft(){ try{ await window.storage.set('draft', JSON.stringify(state.draft)); }catch(e){} }
+async function saveTimerStart(){ try{ await window.storage.set('timerStart', JSON.stringify(state.timerStart)); }catch(e){} }
+async function saveLastTraining(){ try{ await window.storage.set('lastTraining', JSON.stringify(state.lastTraining)); }catch(e){} }
+
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function fmtDate(iso){
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('de-DE',{weekday:'short', day:'2-digit', month:'2-digit'});
+}
+function getPlan(id){ return state.plans.find(p=>p.id===id); }
+
+function draftFor(planId){
+  if(!state.draft.planId || state.draft.planId!==planId){
+    state.draft = { planId, sets:{} };
+  }
+  return state.draft;
+}
+
+function tallyMarkup(count, target){
+  let html = '<div class="tally-row">';
+  const total = Math.max(count, target);
+  for(let i=0;i<total;i++){
+    const filled = i < count;
+    const isFifth = (i%5)===4;
+    html += `<div class="tally ${filled?'':'empty'}"><div class="stroke"></div>${isFifth?'<div class="diag"></div>':''}</div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+/* ---------- HOME DASHBOARD ---------- */
+function lastSession(){
+  if(state.sessions.length===0) return null;
+  return [...state.sessions].sort((a,b)=> b.date.localeCompare(a.date) || b.id.localeCompare(a.id))[0];
+}
+function greeting(){
+  const h = new Date().getHours();
+  if(h<11) return 'Guten Morgen';
+  if(h<18) return 'Guten Tag';
+  return 'Guten Abend';
+}
+function fmtDateLong(iso){
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function weekdayLong(iso){
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('de-DE',{weekday:'long'});
+}
+function formatElapsed(startIso){
+  const secs = Math.max(0, Math.floor((Date.now()-new Date(startIso).getTime())/1000));
+  const m = String(Math.floor(secs/60)).padStart(2,'0');
+  const s = String(secs%60).padStart(2,'0');
+  return `${m}:${s}`;
+}
+let timerInterval = null;
+function startTimerInterval(){
+  stopTimerInterval();
+  timerInterval = setInterval(()=>{
+    const el = document.getElementById('timer-display');
+    if(el && state.timerStart) el.textContent = formatElapsed(state.timerStart);
+  },1000);
+}
+function stopTimerInterval(){
+  if(timerInterval){ clearInterval(timerInterval); timerInterval=null; }
+}
+
+function renderHome(){
+  const running = !!state.timerStart;
+  const last = lastSession();
+  const lastPlan = last ? getPlan(last.planId) : null;
+  const lastPlanName = lastPlan ? lastPlan.name : (last ? last.planName : (state.plans[0] ? state.plans[0].name : '—'));
+
+  let html = `<div class="page-head greet-head">
+    <h1>${greeting()}</h1>
+    <div class="date-line">${fmtDateLong(todayISO())}</div>
+    <div class="date-line weekday">${weekdayLong(todayISO())}</div>
+  </div>`;
+
+  html += `<div class="home-grid">
+    <div class="tile tile-spotify" data-action="open-spotify">
+      <div class="tile-label">Spotify</div>
+      <div class="tile-sub">App öffnen</div>
+    </div>
+    <div class="tile tile-lastplan" data-action="open-workout" data-plan="${last?last.planId:(state.plans[0]&&state.plans[0].id)||''}">
+      <div class="tile-label">Letztes Training</div>
+      <div class="tile-value">${lastPlanName}</div>
+      <div class="tile-sub">${state.plans.length} Pläne · antippen zum Starten</div>
+    </div>
+    <div class="tile timer-tile">
+      <div class="seg start ${running?'':'active'}" ${running?'':'data-action="timer-start"'}>Start</div>
+      <div class="seg mid" id="timer-display">${running?formatElapsed(state.timerStart):(state.lastTraining?String(state.lastTraining.minutes).padStart(2,'0')+':00':'00:00')}</div>
+      <div class="seg stop ${running?'active':''}" ${running?'data-action="timer-stop"':''}>Stopp</div>
+    </div>
+  </div>`;
+
+  html += `<div class="last-training-row">
+    <div class="eyebrow">Letztes Training</div>
+    <div class="last-value">${state.lastTraining?state.lastTraining.minutes+' min':'—'}</div>
+  </div>`;
+
+  document.getElementById('main').innerHTML = html;
+  if(running) startTimerInterval(); else stopTimerInterval();
+}
+
+/* ---------- WORKOUT SCREEN ---------- */
+function renderWorkoutScreen(){
+  document.getElementById('topsafe').style.display='none';
+  document.getElementById('tabbar').style.display='none';
+
+  const plan = getPlan(state.activePlanId);
+  const draft = draftFor(state.activePlanId);
+  let html = `<div class="editor-topbar">
+    <button class="cancel" data-action="close-workout">Schließen</button>
+    <div class="title">Heutiges Training</div>
+    <span style="width:60px;"></span>
+  </div>`;
+  html += `<main style="padding:20px 18px 100px;">`;
+
+  if(state.plans.length===0){
+    html += `<div class="empty-state"><div class="eyebrow">Kein Trainingsplan</div>Leg im Tab "Trainingsplan" deinen ersten Plan an.</div>`;
+    html += `</main>`;
+    document.getElementById('main').innerHTML = html;
+    return;
+  }
+
+  html += '<ul class="day-chips">';
+  state.plans.forEach(p=>{
+    html += `<li class="day-chip ${p.id===state.activePlanId?'active':''}" data-action="pick-plan" data-plan="${p.id}">${p.name}</li>`;
+  });
+  html += '</ul>';
+
+  if(!plan || plan.exercises.length===0){
+    html += `<div class="empty-state"><div class="eyebrow">Leerer Plan</div>Füg im Tab "Trainingsplan" Übungen zu "${plan?plan.name:''}" hinzu.</div>`;
+  } else {
+    plan.exercises.forEach(ex=>{
+      const loggedSets = draft.sets[ex.id] || [];
+      html += `<div class="exercise">
+        <div class="ex-name">${ex.name}</div>
+        <div class="ex-target">Ziel ${ex.targetSets}×${ex.targetReps}${ex.targetWeight?` @ ${ex.targetWeight}kg`:''}</div>
+        ${tallyMarkup(loggedSets.length, ex.targetSets)}
+        <div class="set-form">
+          <div class="field"><input type="number" inputmode="numeric" placeholder="${ex.targetReps}" id="reps-${ex.id}"><span class="unit">Wdh.</span></div>
+          <div class="field"><input type="number" inputmode="decimal" placeholder="${ex.targetWeight||0}" id="weight-${ex.id}"><span class="unit">kg</span></div>
+          <button class="btn-log" data-action="log-set" data-ex="${ex.id}">Satz</button>
+        </div>
+        ${loggedSets.length?`<div class="logged-sets">${loggedSets.map((s,i)=>`Satz ${i+1}: <span>${s.reps}×${s.weight}kg</span>`).join(' · ')}</div>`:''}
+      </div>`;
+    });
+
+    const hasAny = Object.keys(draft.sets).length>0;
+    html += `<div class="finish-bar">
+      <button class="btn-primary" data-action="finish" ${hasAny?'':'disabled'}>Training abschließen</button>
+      ${hasAny?'<button class="btn-secondary" data-action="clear-draft">Heutige Einträge verwerfen</button>':''}
+    </div>`;
+  }
+  html += `</main>`;
+  document.getElementById('main').innerHTML = html;
+}
+
+/* ---------- VERLAUF ---------- */
+function renderHistory(){
+  let html = `<div class="page-head"><div class="eyebrow">Verlauf</div><h1>Letzte Einheiten</h1></div>`;
+  if(state.sessions.length===0){
+    html += `<div class="empty-state"><div class="eyebrow">Noch nichts</div>Schließ dein erstes Training ab, dann taucht es hier auf.</div>`;
+  } else {
+    const sorted = [...state.sessions].sort((a,b)=> b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+    sorted.forEach(s=>{
+      const open = state.openSessions[s.id];
+      html += `<div class="session ${open?'open':''}" data-action="toggle-session" data-id="${s.id}">
+        <div class="session-head">
+          <div><div class="session-day">${s.planName}</div><div class="session-date">${fmtDate(s.date)}</div></div>
+          <div class="chev">›</div>
+        </div>
+        <div class="session-body">
+          ${s.exercises.map(ex=>`<div class="hist-ex"><div class="name">${ex.name}</div>
+            <div class="sets">${ex.sets.map(st=>`${st.reps}×${st.weight}kg`).join(' · ')}</div></div>`).join('')}
+        </div>
+      </div>`;
+    });
+  }
+  document.getElementById('main').innerHTML = html;
+}
+
+/* ---------- TRAININGSPLAN: LISTE ---------- */
+function renderPlansList(){
+  let html = `<div class="page-head"><div class="eyebrow">Trainingsplan</div><h1>Deine Pläne</h1></div>`;
+  const newestFirst = [...state.plans].reverse();
+  newestFirst.forEach(p=>{
+    html += `<div class="plan-card">
+      <div>
+        <div class="name">${p.name}</div>
+        <div class="meta">${p.exercises.length} Übung${p.exercises.length===1?'':'en'}</div>
+      </div>
+      <div class="plan-actions">
+        <button class="icon-circle edit" data-action="edit-plan" data-plan="${p.id}">✎</button>
+        <button class="icon-circle play" data-action="view-plan" data-plan="${p.id}"><span class="tri"></span></button>
+      </div>
+    </div>`;
+  });
+  html += `<div class="new-plan-card" data-action="new-plan"><span class="plus">+</span>Neuer Trainingsplan</div>`;
+  html += `<button class="reset-link" data-action="reset-all">Alle Daten zurücksetzen</button>`;
+  document.getElementById('main').innerHTML = html;
+}
+
+/* ---------- TRAININGSPLAN: EDITOR ---------- */
+function renderEditor(){
+  const ed = state.editor;
+  const isNew = ed.id===null;
+  const readOnly = ed.mode==='view';
+  document.getElementById('topsafe').style.display='none';
+  document.getElementById('tabbar').style.display='none';
+
+  let html = `<div class="editor-topbar">
+    <button class="cancel" data-action="editor-cancel">${readOnly?'Schließen':'Abbrechen'}</button>
+    <div class="title">${readOnly?'Plan ansehen':(isNew?'Neuer Plan':'Plan bearbeiten')}</div>
+    ${readOnly?'<span style="width:52px;"></span>':'<button class="save" data-action="editor-save">Fertig</button>'}
+  </div>`;
+  html += `<main style="padding:20px 18px 60px;">`;
+  html += `<input class="name-input-big" id="editor-name" placeholder="Name des Plans" value="${ed.name}" ${readOnly?'disabled':''}>`;
+
+  if(ed.exercises.length){
+    ed.exercises.forEach(ex=>{
+      html += `<div class="ex-row">
+        <div>
+          <div class="name">${ex.name}</div>
+          <div class="spec">${ex.targetSets} Sätze × ${ex.targetReps} Wdh.${ex.targetWeight?` · ${ex.targetWeight}kg`:''}</div>
+        </div>
+        ${readOnly?'':`<button class="del" data-action="editor-delete-ex" data-ex="${ex.id}">✕</button>`}
+      </div>`;
+    });
+  } else if(readOnly){
+    html += `<div class="empty-state"><div class="eyebrow">Leer</div>Dieser Plan hat noch keine Übungen.</div>`;
+  }
+
+  if(!readOnly){
+    html += `<div class="add-ex-form">
+      <div class="eyebrow">Übung hinzufügen</div>
+      <input id="new-ex-name" placeholder="Name der Übung">
+      <div class="row3">
+        <div class="field"><input type="number" id="new-ex-sets" placeholder="3"><span class="unit">Sätze</span></div>
+        <div class="field"><input type="number" id="new-ex-reps" placeholder="10"><span class="unit">Wdh.</span></div>
+        <div class="field"><input type="number" id="new-ex-weight" placeholder="0"><span class="unit">Kilo</span></div>
+      </div>
+      <button class="add-ex-btn" data-action="editor-add-ex">+ Übung hinzufügen</button>
+    </div>`;
+
+    if(!isNew){
+      html += `<button class="delete-plan-btn" data-action="editor-delete-plan">Trainingsplan löschen</button>`;
+    }
+  }
+  html += `</main>`;
+  document.getElementById('main').innerHTML = html;
+}
+
+function renderModal(){
+  const root = document.getElementById('modal-root');
+  if(!state.pendingConfirm){ root.innerHTML=''; return; }
+  const msg = state.pendingConfirm.type==='delete-plan'
+    ? 'Diesen Trainingsplan wirklich löschen? Das kann nicht rückgängig gemacht werden.'
+    : 'Wirklich ALLE Daten löschen? Pläne und Verlauf werden entfernt.';
+  root.innerHTML = `<div class="modal-backdrop" data-action="confirm-no">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="eyebrow">Sicher?</div>
+      <p>${msg}</p>
+      <div class="modal-actions">
+        <button class="m-cancel" data-action="confirm-no">Abbrechen</button>
+        <button class="m-confirm" data-action="confirm-yes">Bestätigen</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- RENDER SWITCH ---------- */
+function render(){
+  if(state.editor){
+    renderEditor();
+    renderModal();
+    return;
+  }
+  if(state.workoutOpen){
+    renderWorkoutScreen();
+    renderModal();
+    return;
+  }
+  document.getElementById('topsafe').style.display='';
+  document.getElementById('tabbar').style.display='';
+  document.querySelectorAll('nav.tabbar button').forEach(b=>b.classList.toggle('active', b.dataset.tab===state.tab));
+  if(state.tab==='home') renderHome();
+  else if(state.tab==='history') renderHistory();
+  else renderPlansList();
+  renderModal();
+}
+
+document.querySelectorAll('nav.tabbar button').forEach(b=>{
+  b.addEventListener('click', ()=>{ stopTimerInterval(); state.tab = b.dataset.tab; render(); });
+});
+
+document.getElementById('main').addEventListener('click', async (e)=>{
+  const t = e.target.closest('[data-action]');
+  if(!t) return;
+  const action = t.dataset.action;
+
+  if(action==='pick-plan'){
+    state.activePlanId = t.dataset.plan;
+    render();
+  }
+  else if(action==='open-spotify'){
+    const fallback = setTimeout(()=>{ window.location.href = 'https://open.spotify.com'; }, 700);
+    window.location.href = 'spotify:';
+    setTimeout(()=>clearTimeout(fallback), 1200);
+  }
+  else if(action==='open-workout'){
+    if(t.dataset.plan) state.activePlanId = t.dataset.plan;
+    state.workoutOpen = true;
+    stopTimerInterval();
+    render();
+  }
+  else if(action==='close-workout'){
+    state.workoutOpen = false;
+    render();
+  }
+  else if(action==='timer-start'){
+    state.timerStart = new Date().toISOString();
+    await saveTimerStart();
+    render();
+  }
+  else if(action==='timer-stop'){
+    const mins = Math.max(1, Math.round((Date.now()-new Date(state.timerStart).getTime())/60000));
+    state.lastTraining = { minutes: mins, date: todayISO() };
+    state.timerStart = null;
+    await saveTimerStart();
+    await saveLastTraining();
+    render();
+  }
+  else if(action==='log-set'){
+    const exId = t.dataset.ex;
+    const reps = parseFloat(document.getElementById(`reps-${exId}`).value);
+    const weight = parseFloat(document.getElementById(`weight-${exId}`).value);
+    if(!reps){ return; }
+    const draft = draftFor(state.activePlanId);
+    if(!draft.sets[exId]) draft.sets[exId]=[];
+    draft.sets[exId].push({ reps, weight: weight||0 });
+    await saveDraft();
+    render();
+  }
+  else if(action==='clear-draft'){
+    state.draft = { planId: state.activePlanId, sets:{} };
+    await saveDraft();
+    render();
+  }
+  else if(action==='finish'){
+    const plan = getPlan(state.activePlanId);
+    const draft = draftFor(state.activePlanId);
+    const exercises = plan.exercises
+      .filter(ex=>draft.sets[ex.id] && draft.sets[ex.id].length)
+      .map(ex=>({ name:ex.name, sets:draft.sets[ex.id] }));
+    if(exercises.length===0) return;
+    state.sessions.push({ id:uid(), date:todayISO(), planId:plan.id, planName:plan.name, exercises });
+    await saveSessions();
+    state.draft = { planId: state.activePlanId, sets:{} };
+    await saveDraft();
+    state.workoutOpen = false;
+    state.tab='history';
+    render();
+  }
+  else if(action==='toggle-session'){
+    state.openSessions[t.dataset.id] = !state.openSessions[t.dataset.id];
+    render();
+  }
+  else if(action==='edit-plan'){
+    const plan = getPlan(t.dataset.plan);
+    state.editor = { id: plan.id, name: plan.name, exercises: JSON.parse(JSON.stringify(plan.exercises)), mode:'edit' };
+    render();
+  }
+  else if(action==='view-plan'){
+    const plan = getPlan(t.dataset.plan);
+    state.editor = { id: plan.id, name: plan.name, exercises: JSON.parse(JSON.stringify(plan.exercises)), mode:'view' };
+    render();
+  }
+  else if(action==='editor-delete-plan'){
+    state.pendingConfirm = { type:'delete-plan', planId: state.editor.id };
+    render();
+  }
+  else if(action==='new-plan'){
+    state.editor = { id:null, name:'', exercises:[], mode:'edit' };
+    render();
+  }
+  else if(action==='editor-cancel'){
+    state.editor = null;
+    render();
+  }
+  else if(action==='editor-save'){
+    const name = document.getElementById('editor-name').value.trim() || 'Trainingsplan';
+    if(state.editor.id===null){
+      state.plans.push({ id:uid(), name, exercises:state.editor.exercises });
+    } else {
+      const plan = getPlan(state.editor.id);
+      plan.name = name;
+      plan.exercises = state.editor.exercises;
+    }
+    await savePlans();
+    state.editor = null;
+    state.tab = 'plans';
+    render();
+  }
+  else if(action==='editor-delete-ex'){
+    state.editor.exercises = state.editor.exercises.filter(x=>x.id!==t.dataset.ex);
+    render();
+  }
+  else if(action==='editor-add-ex'){
+    const name = document.getElementById('new-ex-name').value.trim();
+    if(!name) return;
+    const sets = parseInt(document.getElementById('new-ex-sets').value)||3;
+    const reps = parseInt(document.getElementById('new-ex-reps').value)||10;
+    const weight = parseFloat(document.getElementById('new-ex-weight').value)||0;
+    state.editor.exercises.push({ id:uid(), name, targetSets:sets, targetReps:reps, targetWeight:weight });
+    render();
+  }
+  else if(action==='reset-all'){
+    state.pendingConfirm = { type:'reset-all' };
+    render();
+  }
+});
+
+document.getElementById('modal-root').addEventListener('click', async (e)=>{
+  const t = e.target.closest('[data-action]');
+  if(!t) return;
+  const action = t.dataset.action;
+
+  if(action==='confirm-no'){
+    state.pendingConfirm = null;
+    render();
+  }
+  else if(action==='confirm-yes'){
+    const pc = state.pendingConfirm;
+    if(pc.type==='delete-plan'){
+      state.plans = state.plans.filter(p=>p.id!==pc.planId);
+      if(state.activePlanId===pc.planId) state.activePlanId = state.plans[0] && state.plans[0].id;
+      await savePlans();
+      state.editor = null;
+      state.tab = 'plans';
+    } else if(pc.type==='reset-all'){
+      state.plans = JSON.parse(JSON.stringify(DEFAULT_PLANS));
+      state.sessions = [];
+      state.draft = {};
+      await savePlans(); await saveSessions(); await saveDraft();
+      state.activePlanId = state.plans[0].id;
+      state.editor = null;
+    }
+    state.pendingConfirm = null;
+    render();
+  }
+});
+
+loadAll();
+</script>
+</body>
+</html>
